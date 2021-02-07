@@ -1,4 +1,5 @@
 import numpy as np
+from numpy import random
 
 I = complex(0, 1)
 
@@ -158,7 +159,13 @@ class QuantumComputer:
         return self.state
 
     def measurement(self, qubit):
-        pass
+        random_p = random.rand()
+        p0 = self.get_probabilities_of(qubit)[0]
+
+        observation = 0 if random_p <= p0 else 1
+        self.force_measurement(qubit, observation)
+
+        return observation
 
     def force_measurement(self, qubit, outcome):
         if qubit >= self.num_qubit() or qubit < 0:
