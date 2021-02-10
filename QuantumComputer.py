@@ -1,3 +1,5 @@
+# Source Code: https://github.com/Vivswan/PHYS-3770-Quantum-Information
+
 import numpy as np
 from numpy import random
 
