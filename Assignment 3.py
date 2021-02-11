@@ -1,5 +1,3 @@
-import math
-
 import numpy as np
 
 
@@ -22,7 +20,7 @@ def kron(*args):
 
 
 def trace_of(density_matrix, remove_qubit):
-    num_qubits = int(math.log2(np.shape(density_matrix)[0]))
+    num_qubits = int(np.log2(np.shape(density_matrix)[0]))
 
     if not (0 <= remove_qubit < num_qubits):
         raise Exception(f"Invalid remove qubit: "
@@ -93,7 +91,7 @@ def main():
     zoo = kron(zero, one, one)
     ooz = kron(one, one, zero)
 
-    phi = np.array((zzo - 1j * ozz - zoo + 1j * ooz) / math.sqrt(4))
+    phi = np.array((zzo - 1j * ozz - zoo + 1j * ooz) / np.sqrt(4))
     # print(phi)
     # print()
     phi_density_matrix = np.matmul(phi, phi.conjugate().transpose())
