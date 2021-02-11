@@ -80,9 +80,9 @@ def main():
             new_matrix = trace_of(density_matrices[i], j)
             print()
             print(f"Trace of {j} on {i} => "
-                  f"Physical: {abs(np.round(physicality(new_matrix), 1))}, "
-                  f"Purity: {abs(np.round(purity(new_matrix), 1))}")
-            print(new_matrix.round(2))
+                  f"Physical: {abs(np.round(physicality(new_matrix), 3))}, "
+                  f"Purity: {abs(np.round(purity(new_matrix), 3))}")
+            print(new_matrix.round(3))
 
     print()
     print('Question 2')
@@ -103,10 +103,10 @@ def main():
         xx.remove(i)
         print()
         print(f"Trace of {i} => phi{xx} => "
-              f"Physical: {abs(physicality(after_trace))}, "
-              f"Purity: {abs(purity(after_trace))}, "
+              f"Physical: {abs(np.round(physicality(after_trace), 3))}, "
+              f"Purity: {abs(np.round(purity(after_trace), 3))}, "
               f"Fully Entangled: {abs(purity(after_trace)) == 1}")
-        print(after_trace)
+        print(after_trace.round(3))
 
         # for j in [0, 1]:
         #     after_trace = trace_of(trace_of(phi_density_matrix, i), j)
