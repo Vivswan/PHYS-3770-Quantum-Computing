@@ -1,6 +1,6 @@
 # Source Code: https://github.com/Vivswan/PHYS-3770-Quantum-Information
 #
-# Output
+# Output:
 # 2 (A): Wavefunction = 1.000 |11>
 # 2 (B): Wavefunction = 0.707 |00> + 0.707 |11>
 #

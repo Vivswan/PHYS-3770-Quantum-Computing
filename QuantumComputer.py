@@ -5,6 +5,15 @@ from numpy import random
 
 I = complex(0, 1)
 
+ZERO = np.array([
+    [1],
+    [0]
+])
+ONE = np.array([
+    [0],
+    [1]
+])
+
 # Gates
 X_GATE = np.array([
     [0, 1],
