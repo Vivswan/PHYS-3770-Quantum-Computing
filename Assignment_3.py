@@ -1,7 +1,7 @@
 # Source Code: https://github.com/Vivswan/PHYS-3770-Quantum-Information
 #
 # Output:
-# Question 1
+# Question 1:
 # Trace of 0 on E_plus_density => phi[1] = 0.5 |0⟩⟨0| + 0.5 |1⟩⟨1| (Physical: 1.0, Purity: 0.5)
 # Trace of 1 on E_plus_density => phi[0] = 0.5 |0⟩⟨0| + 0.5 |1⟩⟨1| (Physical: 1.0, Purity: 0.5)
 # Trace of 0 on E_minus_density => phi[1] = 0.5 |0⟩⟨0| + 0.5 |1⟩⟨1| (Physical: 1.0, Purity: 0.5)
@@ -11,7 +11,7 @@
 # Trace of 0 on O_minus_density => phi[1] = 0.5 |0⟩⟨0| + 0.5 |1⟩⟨1| (Physical: 1.0, Purity: 0.5)
 # Trace of 1 on O_minus_density => phi[0] = 0.5 |0⟩⟨0| + 0.5 |1⟩⟨1| (Physical: 1.0, Purity: 0.5)
 #
-# Question 2
+# Question 2:
 #
 # Trace of 0 => phi[1, 2] = 0.167 |00⟩⟨00| + -0.236 |00⟩⟨10| + 0.167 |01⟩⟨01| + -0.236 |01⟩⟨11| + -0.236 |10⟩⟨00| + 0.333 |10⟩⟨10| + -0.236 |11⟩⟨01| + 0.333 |11⟩⟨11|
 # Physical: 1.0, Purity: 0.5
@@ -24,11 +24,22 @@
 # Trace of 2 => phi[0, 1] = 0.167 |00⟩⟨00| + -0.236 |00⟩⟨01| + -0.236 |01⟩⟨00| + 0.333 |01⟩⟨01| + 0.167 |10⟩⟨10| + -0.236 |10⟩⟨11| + -0.236 |11⟩⟨10| + 0.333 |11⟩⟨11|
 # Physical: 1.0, Purity: 0.5
 # Qubit[0, 1] are not fully entangled
-
+#
+# Question 3:
+# H: [[0.7071067811865475, 0.7071067811865475], [0.7071067811865475, -0.7071067811865475]]
+# Eigenvector for 1.0: [[0.9238795325112867], [0.3826834323650897]]
+# Eigenvector for -1.0: [[-0.3826834323650897], [0.9238795325112867]]
+# Completeness Relation:  True
+# Eigenvector test for 0:  True
+# Eigenvector test for 1:  True
+# M_0: [[0.85355339 0.35355339]
+#  [0.35355339 0.14644661]]
+# M_1: [[ 0.14644661 -0.35355339]
+#  [-0.35355339  0.85355339]]
 
 import numpy as np
 
-from QuantumComputer import ZERO, ONE
+from QuantumComputer import ZERO, ONE, H_GATE
 
 
 def physicality(pho):
@@ -103,7 +114,7 @@ def trace_of(density_matrix, remove_qubit):
 
 def question1():
     print()
-    print('Question 1')
+    print('Question 1:')
 
     zz = kron(ZERO, ZERO)
     zo = kron(ZERO, ONE)
@@ -132,7 +143,7 @@ def question1():
 
 def question2():
     print()
-    print('Question 2')
+    print('Question 2:')
 
     zzo = kron(ZERO, ZERO, ONE)
     ozz = kron(ONE, ZERO, ZERO)
@@ -158,9 +169,29 @@ def question2():
             print(f"Qubit{xx} are not fully entangled")
 
 
+def question3():
+    print()
+    print("Question 3:")
+    eigenvalues, eigenvectors = np.linalg.eig(H_GATE)
+    print("H:", H_GATE.tolist())
+    eigenvectors_list = [eigenvectors[:, 0].reshape(2, 1), eigenvectors[:, 1].reshape(2, 1)]
+    m_h0 = np.matmul(eigenvectors_list[0], eigenvectors_list[0].conjugate().transpose())
+    m_h1 = np.matmul(eigenvectors_list[1], eigenvectors_list[1].conjugate().transpose())
+    print(f"Eigenvector for {eigenvalues[0]}:", eigenvectors_list[0].tolist())
+    print(f"Eigenvector for {np.round(eigenvalues[1], 1)}:", eigenvectors_list[1].tolist())
+    print("Completeness Relation: ", np.all(
+        np.matmul(m_h0.conjugate().transpose(), m_h0) + np.matmul(m_h1.conjugate().transpose(), m_h1) == np.identity(
+            2)))
+    print("Eigenvector test for 0: ", np.all(np.matmul(m_h0, eigenvectors_list[0]) == eigenvectors_list[0]))
+    print("Eigenvector test for 1: ", np.all(np.matmul(m_h1, eigenvectors_list[1]) == eigenvectors_list[1]))
+    print("M_0:", m_h0)
+    print("M_1:", m_h1)
+
+
 def main():
     question1()
     question2()
+    question3()
 
 
 if __name__ == '__main__':

@@ -49,24 +49,32 @@ def is_hermitian(m):
     return np.all(np.isclose(m.conjugate().transpose(), m))
 
 
-def make_full_gate_matrix(gate, qubit, qubits):
-    np_gate = np.array(gate)
-    gate_size = np_gate.shape[0] / 2
-    all_gates = []
-
-    for i in range(0, qubits):
-        if qubit == i:
-            all_gates.append(np_gate)
-        elif qubit < i < qubit + gate_size:
-            all_gates.append(None)
+def kron(args):
+    c = None
+    for i in args:
+        if c is None:
+            c = i
         else:
-            all_gates.append(np.identity(2))
+            c = np.kron(c, i)
+    return c
 
-    full_gate = all_gates[0]
 
-    for index, value in enumerate(all_gates):
-        if index != 0 and value is not None:
-            full_gate = np.kron(full_gate, value)
+def full_unitary_at_time_step(number_qubits, gates):
+    full_gate = None
+    for index in range(0, number_qubits):
+        if index in gates:
+            if not gates[index].shape == (2, 2):
+                raise Exception(f"Gates on {index} is not a single qubit gate.")
+            if not is_unitary(gates[index]):
+                raise Exception(f"Gates on {index} is not unitary.")
+            gate = gates[index]
+        else:
+            gate = np.identity(2)
+
+        if index == 0:
+            full_gate = gate
+        else:
+            full_gate = np.kron(full_gate, gate)
 
     return full_gate
 
@@ -74,80 +82,134 @@ def make_full_gate_matrix(gate, qubit, qubits):
 # noinspection PyPep8Naming
 class QuantumComputer:
     def __init__(self, number_of_qubits):
-        self.state = self.reset_state(number_of_qubits)
+        self.state, self.density_matrix = self.reset_state(number_of_qubits)
+        self.unitary = np.identity(np.power(2, number_of_qubits))
 
     def reset_state(self, number_of_qubits):
-        self.state = np.zeros(np.power(2, number_of_qubits))
+        dim = np.power(2, number_of_qubits)
+        self.state = np.zeros((dim, 1))
         self.state[0] = 1
-        return self.state
+        self.density_matrix = np.matmul(self.state, self.state.conjugate().transpose())
+        return self.state, self.density_matrix
 
     def set_state(self, state):
-        state = np.copy(state)
-        if int(np.log2(len(state))) != len(state):
-            raise Exception("invalid state")
         self.state = np.copy(state)
+        self.density_matrix = np.matmul(self.state, self.state.conjugate().transpose())
 
-    def get_state(self):
-        return np.copy(self.state)
+    def set_density_matrix(self, density_matrix):
+        self.density_matrix = np.copy(density_matrix)
+        self.state = np.zeros((self.density_matrix.shape[0], 1))
+        for i in range(0, self.density_matrix.shape[0]):
+            self.state[i] = np.sqrt(self.density_matrix[i][i])
 
     def num_qubit(self):
-        return int(np.log2(len(self.state)))
+        return int(np.log2(self.state.shape[0]))
 
-    def gate(self, gate, qubit: int):
-        gate = np.array(gate)
+    def gates(self, gates, qubit=None):
+        if type(gates) != 'dict':
+            gates = {qubit: gates}
 
+        self.full_gate(full_unitary_at_time_step(self.num_qubit(), gates))
+
+    def full_gate(self, gate):
+        if not gate.shape == self.unitary.shape:
+            raise Exception("Gate is not a Full Gate.")
         if not is_unitary(gate):
-            raise Exception("gate is not unitary")
+            raise Exception("Full Gate not unitary.")
 
-        full_gate = make_full_gate_matrix(gate, qubit, self.num_qubit())
-        self.state = np.matmul(full_gate, self.state)
+        self.unitary = np.matmul(gate, self.unitary)
+        self.density_matrix = np.matmul(np.matmul(gate.conj().T, self.density_matrix), gate)
+        self.state = np.matmul(gate, self.state)
 
-    def X(self, *args):
-        return self.gate(X_GATE, *args)
+    def X(self, target):
+        return self.gates(X_GATE, target)
 
-    def Y(self, *args):
-        return self.gate(Y_GATE, *args)
+    def Y(self, target):
+        return self.gates(Y_GATE, target)
 
-    def Z(self, *args):
-        return self.gate(Z_GATE, *args)
+    def Z(self, target):
+        return self.gates(Z_GATE, target)
 
-    def H(self, *args):
-        return self.gate(H_GATE, *args)
+    def H(self, target):
+        return self.gates(H_GATE, target)
 
-    def CNOT(self, *args):
-        return self.gate(CNOT_GATE, *args)
+    def CNOT(self, control, target):
+        zero_term = []
+        one_term = []
+        two_by_two_i = np.identity(2)
 
-    def print_wavefunction(self, with_zeros=False, probabilites=False):
+        for i in range(0, self.num_qubit()):
+            if i == control:
+                zero_term.append(np.matmul(ZERO, ZERO.conjugate().T))
+                one_term.append(np.matmul(ONE, ONE.conjugate().T))
+            elif i == target:
+                zero_term.append(two_by_two_i)
+                one_term.append(X_GATE)
+            else:
+                zero_term.append(two_by_two_i)
+                one_term.append(two_by_two_i)
+
+        return self.full_gate(np.array(kron(zero_term) + kron(one_term)))
+
+    def physicality(self):
+        return np.trace(self.density_matrix)
+
+    def purity(self):
+        return np.trace(np.matmul(self.density_matrix, self.density_matrix))
+
+    def is_physical(self):
+        return np.isclose(self.physicality(), 1)
+
+    def is_pure(self):
+        return np.isclose(self.purity(), 1)
+
+    def bra_notation(self, probabilites=False):
         max_state = int(np.log2(len(self.state)))
-        first = False
-        print("Wavefunction = ", end='')
+        notation = ""
 
         for index, state in enumerate(self.state):
-            if np.isclose(state, 0) and not with_zeros:
-                continue
+            if not np.isclose(state, 0):
+                if len(notation) > 0:
+                    notation += " + "
 
-            if index > 0 and first:
-                print(" + ", end='')
+                if probabilites:
+                    notation += f"{np.power(np.abs(state), 2):.3f}"
+                else:
+                    is_state_real = not np.isclose(complex(state).real, 0)
+                    is_state_imag = not np.isclose(complex(state).imag, 0)
+                    if is_state_real:
+                        notation += f"{complex(state).real:.3f}"
+                    if is_state_real and is_state_imag:
+                        notation += " + "
+                    if is_state_imag:
+                        notation += f"{complex(state).imag:.3f}i"
 
-            if probabilites:
-                print(f"{np.power(np.abs(state), 2):.3f} ", end='')
-            else:
-                is_state_real = not np.isclose(complex(state).real, 0)
-                is_state_imag = not np.isclose(complex(state).imag, 0)
-                if is_state_real:
-                    print(f"{complex(state).real:.3f} ", end='')
-                if is_state_real and is_state_imag:
-                    print("+ ", end='')
-                if is_state_imag:
-                    print(f"{complex(state).imag:.3f}i ", end='')
+                n_state = "{0:b}".format(index).zfill(max_state)
+                notation += f" |{n_state}⟩"
 
-            n_state = bin(index).replace('0b', '')
-            n_state = ("0" * (max_state - len(n_state))) + n_state
-            print(f"|{n_state}>", end='')
+        return notation
 
-            first = True
+    def bra_ket_notation(self):
+        num_qubits = int(np.log2(np.shape(self.density_matrix)[0]))
+        bra_ket_notation = ""
 
-        print()
+        notation_array = []
+        for i in range(0, 2 ** num_qubits):
+            notation_array.append("{0:b}".format(i).zfill(num_qubits))
+
+        for row_index, row in enumerate(notation_array):
+            for col_index, col in enumerate(notation_array):
+                if not np.isclose(self.density_matrix[row_index][col_index], 0):
+                    if len(bra_ket_notation) > 0:
+                        bra_ket_notation += " + "
+                    if np.isclose(np.imag(self.density_matrix[row_index][col_index]), 0):
+                        value = np.real(self.density_matrix[row_index][col_index])
+                    else:
+                        value = np.imag(self.density_matrix[row_index][col_index])
+
+                    bra_ket_notation += f"{str(np.round(value, 3)).replace('j', 'i')} |{row}⟩⟨{col}|"
+
+        return bra_ket_notation
 
     def get_probabilities(self):
         return np.power(np.abs(self.state), 2)
@@ -156,26 +218,25 @@ class QuantumComputer:
         p = [0, 0]
 
         for i in range(0, len(self.state)):
-            n_state = bin(i).replace('0b', '')
-            n_state = ("0" * (self.num_qubit() - len(n_state))) + n_state
-            p[int(n_state[qubit])] += np.power(np.abs(self.state[i]), 2)
+            n_state = int("{0:b}".format(i).zfill(self.num_qubit())[qubit])
+            p[n_state] += np.power(np.abs(self.state[i]), 2)
 
         return np.array(p)
-
-    def print_probabilities(self):
-        self.print_wavefunction(probabilites=True)
 
     def normalise(self):
         self.state = self.state / np.linalg.norm(self.state)
         return self.state
 
-    def measurement(self, qubit):
+    def sim_measurement(self, qubit):
         random_p = random.rand()
         p0 = self.get_probabilities_of(qubit)[0]
 
         observation = 0 if random_p <= p0 else 1
-        self.force_measurement(qubit, observation)
+        return observation
 
+    def measurement(self, qubit):
+        observation = self.sim_measurement(qubit)
+        self.force_measurement(qubit, observation)
         return observation
 
     def force_measurement(self, qubit, outcome):
