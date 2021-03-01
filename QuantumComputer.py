@@ -1,7 +1,7 @@
 # Source Code: https://github.com/Vivswan/PHYS-3770-Quantum-Information
 
 import numpy as np
-from numpy import random
+from numpy import random, ndarray
 
 I = complex(0, 1)
 
@@ -81,6 +81,10 @@ def full_unitary_at_time_step(number_qubits, gates):
 
 # noinspection PyPep8Naming
 class QuantumComputer:
+    state: ndarray
+    density_matrix: ndarray
+    unitary: ndarray
+
     def __init__(self, number_of_qubits):
         self.state, self.density_matrix = self.reset_state(number_of_qubits)
         self.unitary = np.identity(np.power(2, number_of_qubits))
@@ -121,6 +125,35 @@ class QuantumComputer:
         self.density_matrix = np.matmul(np.matmul(gate.conj().T, self.density_matrix), gate)
         self.state = np.matmul(gate, self.state)
 
+    def controlled_gate(self, gate, controls, targets):
+        if not gate.shape == (2, 2):
+            raise Exception(f"Gates is not a single qubit gate.")
+        if not is_unitary(gate):
+            raise Exception("Full Gate not unitary.")
+
+        zero_term = []
+        one_term = []
+        two_by_two_i = np.identity(2)
+
+        if controls is not list:
+            controls = [controls]
+
+        if targets is not list:
+            targets = [targets]
+
+        for i in range(0, self.num_qubit()):
+            if i in controls:
+                zero_term.append(np.matmul(ZERO, ZERO.conjugate().T))
+                one_term.append(np.matmul(ONE, ONE.conjugate().T))
+            elif i in targets:
+                zero_term.append(two_by_two_i)
+                one_term.append(gate)
+            else:
+                zero_term.append(two_by_two_i)
+                one_term.append(two_by_two_i)
+
+        return self.full_gate(np.array(kron(zero_term) + kron(one_term)))
+
     def X(self, target):
         return self.gates(X_GATE, target)
 
@@ -134,22 +167,7 @@ class QuantumComputer:
         return self.gates(H_GATE, target)
 
     def CNOT(self, control, target):
-        zero_term = []
-        one_term = []
-        two_by_two_i = np.identity(2)
-
-        for i in range(0, self.num_qubit()):
-            if i == control:
-                zero_term.append(np.matmul(ZERO, ZERO.conjugate().T))
-                one_term.append(np.matmul(ONE, ONE.conjugate().T))
-            elif i == target:
-                zero_term.append(two_by_two_i)
-                one_term.append(X_GATE)
-            else:
-                zero_term.append(two_by_two_i)
-                one_term.append(two_by_two_i)
-
-        return self.full_gate(np.array(kron(zero_term) + kron(one_term)))
+        return self.controlled_gate(X_GATE, control, target)
 
     def physicality(self):
         return np.trace(self.density_matrix)

@@ -1,16 +1,30 @@
 # Source Code: https://github.com/Vivswan/PHYS-3770-Quantum-Information
 #
 # Output:
+# Question 1 (XYX = -Y): True
+# Question 3: True
+# Question 4: True
+# Question 5: True
 
 import numpy as np
 
-from QuantumComputer import X_GATE, Y_GATE, QuantumComputer
+from QuantumComputer import Y_GATE, QuantumComputer, Z_GATE, CNOT_GATE
 
 
 def question1():
-    s1 = np.matmul(X_GATE, Y_GATE)
-    s2 = np.matmul(s1, X_GATE)
-    print(s2, np.all(s2 == - Y_GATE))
+    qc = QuantumComputer(1)
+    qc.H(0)
+    qc.Y(0)
+    qc.H(0)
+    print("Question 1 (XYX = -Y):", np.isclose(qc.unitary, -Y_GATE).all())  # True
+
+
+def question3():
+    qc = QuantumComputer(2)
+    qc.H(1)
+    qc.controlled_gate(Z_GATE, 0, 1)
+    qc.H(1)
+    print("Question 3:", np.isclose(qc.unitary, CNOT_GATE).all())  # True
 
 
 def question4():
@@ -20,7 +34,11 @@ def question4():
     qc.CNOT(0, 1)
     qc.H(0)
     qc.H(1)
-    print(np.round(qc.unitary, 3))
+
+    qc_dash = QuantumComputer(2)
+    qc_dash.CNOT(1, 0)
+
+    print("Question 4:", np.isclose(qc.unitary, qc_dash.unitary).all())  # True
 
 
 def question5():
@@ -61,7 +79,8 @@ def question5():
 
 
 def main():
-    # question1()
+    question1()
+    question3()
     question4()
     question5()
 
