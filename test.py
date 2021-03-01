@@ -1,13 +1,21 @@
-import numpy as np
+from QuantumComputer import QuantumComputer
 
-line = "-0.1904,0.119"
+qc = QuantumComputer(2)
+qc.H(0)
+qc.CNOT(0, 1)
+qc.H(1)
+# qc.X(0)
+# # qc.CNOT(1, 2)
+# qc.X(1)
+# qc.Y(1)
+# qc.Y(2)
+# # qc.CNOT(2, 0)
 
-str_list = line.split(",")
-num_list = []
+# p = []
+# for i in range(0, 3):
+#     p.append(qc.get_probabilities_of(i))
 
-for i in str_list:
-    num_list.append(float(i))
 
-a = np.round(np.average(num_list), 4)
-s = np.round(np.std(num_list), 4)
-print([a, s, (a / s)], end="")
+print(qc.bra_notation())
+print(qc.measurement(0))
+print(qc.sim_measurement(0, get_states=True))

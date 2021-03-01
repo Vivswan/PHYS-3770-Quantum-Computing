@@ -49,14 +49,22 @@ def is_hermitian(m):
     return np.all(np.isclose(m.conjugate().transpose(), m))
 
 
-def kron(args):
+def apply_to_list(list, func):
     c = None
-    for i in args:
+    for i in list:
         if c is None:
             c = i
         else:
-            c = np.kron(c, i)
+            c = func(c, i)
     return c
+
+
+def kron(*args):
+    return apply_to_list(args, np.kron)
+
+
+def matmul(*args):
+    return apply_to_list(args, np.matmul)
 
 
 def full_unitary_at_time_step(number_qubits, gates):
@@ -65,8 +73,8 @@ def full_unitary_at_time_step(number_qubits, gates):
         if index in gates:
             if not gates[index].shape == (2, 2):
                 raise Exception(f"Gates on {index} is not a single qubit gate.")
-            if not is_unitary(gates[index]):
-                raise Exception(f"Gates on {index} is not unitary.")
+            # if not is_unitary(gates[index]):
+            #     raise Exception(f"Gates on {index} is not unitary.")
             gate = gates[index]
         else:
             gate = np.identity(2)
@@ -77,6 +85,14 @@ def full_unitary_at_time_step(number_qubits, gates):
             full_gate = np.kron(full_gate, gate)
 
     return full_gate
+
+
+def density_matrix_to_state(density_matrix: ndarray):
+    state = np.zeros((density_matrix.shape[0], 1))
+    for i in range(0, density_matrix.shape[0]):
+        state[i] = np.sqrt(density_matrix[i][i])
+
+    return state
 
 
 # noinspection PyPep8Naming
@@ -102,9 +118,7 @@ class QuantumComputer:
 
     def set_density_matrix(self, density_matrix):
         self.density_matrix = np.copy(density_matrix)
-        self.state = np.zeros((self.density_matrix.shape[0], 1))
-        for i in range(0, self.density_matrix.shape[0]):
-            self.state[i] = np.sqrt(self.density_matrix[i][i])
+        self.state = density_matrix_to_state(self.density_matrix)
 
     def num_qubit(self):
         return int(np.log2(self.state.shape[0]))
@@ -152,7 +166,7 @@ class QuantumComputer:
                 zero_term.append(two_by_two_i)
                 one_term.append(two_by_two_i)
 
-        return self.full_gate(np.array(kron(zero_term) + kron(one_term)))
+        return self.full_gate(np.array(kron(*zero_term) + kron(*one_term)))
 
     def X(self, target):
         return self.gates(X_GATE, target)
@@ -232,41 +246,68 @@ class QuantumComputer:
     def get_probabilities(self):
         return np.power(np.abs(self.state), 2)
 
-    def get_probabilities_of(self, qubit: int):
+    def get_probability_of(self, qubit: int, outcome: [0, 1], get_states=False):
+        if 0 > qubit >= self.num_qubit():
+            raise Exception(f"invalid qubit number ({qubit})")
+
+        if outcome == 0:
+            state = ZERO
+        else:
+            state = ONE
+
+        measurement = full_unitary_at_time_step(self.num_qubit(), {qubit: np.matmul(state, state.conjugate().T)})
+        d = matmul(measurement, self.density_matrix, measurement)
+        p = np.trace(np.abs(d))
+
+        if p != 0:
+            d = d / p
+            s = density_matrix_to_state(d)
+        else:
+            d = None
+            s = None
+
+        if get_states:
+            return p, s, d
+        else:
+            return p
+
+    def get_probabilities_of(self, qubit: int, get_states=False):
         p = [0, 0]
+        d = [None, None]
+        s = [None, None]
 
-        for i in range(0, len(self.state)):
-            n_state = int("{0:b}".format(i).zfill(self.num_qubit())[qubit])
-            p[n_state] += np.power(np.abs(self.state[i]), 2)
+        p[0], s[0], d[0] = self.get_probability_of(qubit, 0, get_states=True)
+        p[1], s[1], d[1] = self.get_probability_of(qubit, 1, get_states=True)
 
-        return np.array(p)
+        if get_states:
+            return p, s, d
+        else:
+            return p
 
     def normalise(self):
         self.state = self.state / np.linalg.norm(self.state)
         return self.state
 
-    def sim_measurement(self, qubit):
+    def sim_measurement(self, qubit, get_states=False):
         random_p = random.rand()
-        p0 = self.get_probabilities_of(qubit)[0]
+        p, s, d = self.get_probabilities_of(qubit, get_states=True)
 
-        observation = 0 if random_p <= p0 else 1
-        return observation
+        observation = 0 if random_p <= p[0] else 1
+        if get_states:
+            return observation, s[observation], d[observation]
+        else:
+            return observation
 
     def measurement(self, qubit):
-        observation = self.sim_measurement(qubit)
-        self.force_measurement(qubit, observation)
+        observation, s, d = self.sim_measurement(qubit, get_states=True)
+        self.state = s
+        self.density_matrix = d
         return observation
 
     def force_measurement(self, qubit, outcome):
-        if qubit >= self.num_qubit() or qubit < 0:
-            raise Exception(f"invalid qubit number ({qubit})")
-
         if outcome not in [0, 1]:
             raise Exception(f"invalid outcome: {outcome}")
 
-        for i in range(0, len(self.state)):
-            n_state = bin(i).replace('0b', '')
-            n_state = ("0" * (self.num_qubit() - len(n_state))) + n_state
-            self.state[i] *= 1 if outcome == int(n_state[qubit]) else 0
-
-        self.normalise()
+        _, s, d = self.get_probabilities_of(qubit, get_states=True)
+        self.state = s[outcome]
+        self.density_matrix = d[outcome]
