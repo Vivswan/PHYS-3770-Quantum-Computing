@@ -22,7 +22,7 @@ def question1():
 def question3():
     qc = QuantumComputer(2)
     qc.H(1)
-    qc.controlled_gate(Z_GATE, 0, 1)
+    qc.controlled_gate(Z_GATE, 1, 0)
     qc.H(1)
     print("Question 3:", np.isclose(qc.unitary, CNOT_GATE).all())  # True
 

@@ -4,6 +4,7 @@ import numpy as np
 from numpy import random, ndarray
 
 I = complex(0, 1)
+IDENTITY_2 = np.identity(2)
 
 ZERO = np.array([
     [1],
@@ -13,6 +14,10 @@ ONE = np.array([
     [0],
     [1]
 ])
+
+# Measurements
+Measurement_ZERO = np.matmul(ZERO, ZERO.conjugate().transpose())
+Measurement_ONE = np.matmul(ONE, ONE.conjugate().transpose())
 
 # Gates
 X_GATE = np.array([
@@ -77,7 +82,7 @@ def full_unitary_at_time_step(number_qubits, gates):
             #     raise Exception(f"Gates on {index} is not unitary.")
             gate = gates[index]
         else:
-            gate = np.identity(2)
+            gate = IDENTITY_2
 
         if index == 0:
             full_gate = gate
@@ -88,7 +93,7 @@ def full_unitary_at_time_step(number_qubits, gates):
 
 
 def density_matrix_to_state(density_matrix: ndarray):
-    state = np.zeros((density_matrix.shape[0], 1))
+    state = np.zeros((density_matrix.shape[0], 1), dtype=complex)
     for i in range(0, density_matrix.shape[0]):
         state[i] = np.sqrt(density_matrix[i][i])
 
@@ -103,11 +108,11 @@ class QuantumComputer:
 
     def __init__(self, number_of_qubits):
         self.state, self.density_matrix = self.reset_state(number_of_qubits)
-        self.unitary = np.identity(np.power(2, number_of_qubits))
+        self.unitary = np.identity(np.power(2, number_of_qubits), dtype=complex)
 
     def reset_state(self, number_of_qubits):
         dim = np.power(2, number_of_qubits)
-        self.state = np.zeros((dim, 1))
+        self.state = np.zeros((dim, 1), dtype=complex)
         self.state[0] = 1
         self.density_matrix = np.matmul(self.state, self.state.conjugate().transpose())
         return self.state, self.density_matrix
@@ -136,10 +141,10 @@ class QuantumComputer:
             raise Exception("Full Gate not unitary.")
 
         self.unitary = np.matmul(gate, self.unitary)
-        self.density_matrix = np.matmul(np.matmul(gate.conj().T, self.density_matrix), gate)
+        self.density_matrix = matmul(gate.conj().T, self.density_matrix, gate)
         self.state = np.matmul(gate, self.state)
 
-    def controlled_gate(self, gate, controls, targets):
+    def controlled_gate(self, gate, targets, controls):
         if not gate.shape == (2, 2):
             raise Exception(f"Gates is not a single qubit gate.")
         if not is_unitary(gate):
@@ -147,7 +152,6 @@ class QuantumComputer:
 
         zero_term = []
         one_term = []
-        two_by_two_i = np.identity(2)
 
         if controls is not list:
             controls = [controls]
@@ -157,14 +161,14 @@ class QuantumComputer:
 
         for i in range(0, self.num_qubit()):
             if i in controls:
-                zero_term.append(np.matmul(ZERO, ZERO.conjugate().T))
-                one_term.append(np.matmul(ONE, ONE.conjugate().T))
+                zero_term.append(Measurement_ZERO)
+                one_term.append(Measurement_ONE)
             elif i in targets:
-                zero_term.append(two_by_two_i)
+                zero_term.append(IDENTITY_2)
                 one_term.append(gate)
             else:
-                zero_term.append(two_by_two_i)
-                one_term.append(two_by_two_i)
+                zero_term.append(IDENTITY_2)
+                one_term.append(IDENTITY_2)
 
         return self.full_gate(np.array(kron(*zero_term) + kron(*one_term)))
 
@@ -181,7 +185,7 @@ class QuantumComputer:
         return self.gates(H_GATE, target)
 
     def CNOT(self, control, target):
-        return self.controlled_gate(X_GATE, control, target)
+        return self.controlled_gate(X_GATE, target, control)
 
     def physicality(self):
         return np.trace(self.density_matrix)
@@ -200,6 +204,7 @@ class QuantumComputer:
         notation = ""
 
         for index, state in enumerate(self.state):
+            state = state[0]
             if not np.isclose(state, 0):
                 if len(notation) > 0:
                     notation += " + "
@@ -251,22 +256,22 @@ class QuantumComputer:
             raise Exception(f"invalid qubit number ({qubit})")
 
         if outcome == 0:
-            state = ZERO
+            gate = Measurement_ZERO
         else:
-            state = ONE
+            gate = Measurement_ONE
 
-        measurement = full_unitary_at_time_step(self.num_qubit(), {qubit: np.matmul(state, state.conjugate().T)})
+        measurement = full_unitary_at_time_step(self.num_qubit(), {qubit: gate})
         d = matmul(measurement, self.density_matrix, measurement)
         p = np.trace(np.abs(d))
 
-        if p != 0:
-            d = d / p
-            s = density_matrix_to_state(d)
-        else:
-            d = None
-            s = None
-
         if get_states:
+            if p != 0:
+                d = d / p
+                s = density_matrix_to_state(d)
+            else:
+                d = None
+                s = None
+
             return p, s, d
         else:
             return p
@@ -284,11 +289,7 @@ class QuantumComputer:
         else:
             return p
 
-    def normalise(self):
-        self.state = self.state / np.linalg.norm(self.state)
-        return self.state
-
-    def sim_measurement(self, qubit, get_states=False):
+    def simulate_measurement(self, qubit, get_states=False):
         random_p = random.rand()
         p, s, d = self.get_probabilities_of(qubit, get_states=True)
 
@@ -299,7 +300,7 @@ class QuantumComputer:
             return observation
 
     def measurement(self, qubit):
-        observation, s, d = self.sim_measurement(qubit, get_states=True)
+        observation, s, d = self.simulate_measurement(qubit, get_states=True)
         self.state = s
         self.density_matrix = d
         return observation
@@ -308,6 +309,14 @@ class QuantumComputer:
         if outcome not in [0, 1]:
             raise Exception(f"invalid outcome: {outcome}")
 
-        _, s, d = self.get_probabilities_of(qubit, get_states=True)
-        self.state = s[outcome]
-        self.density_matrix = d[outcome]
+        _, s, d = self.get_probability_of(qubit, outcome, get_states=True)
+        self.state = s
+        self.density_matrix = d
+
+    def measurement_all(self):
+        observations = []
+
+        for i in range(0, self.num_qubit()):
+            observations.append(self.measurement(i))
+
+        return observations
