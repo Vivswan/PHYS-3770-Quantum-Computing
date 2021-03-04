@@ -39,7 +39,7 @@
 
 import numpy as np
 
-from QuantumComputer import ZERO, ONE, H_GATE
+from QC.QuantumComputer import ZERO, ONE, H_GATE
 
 
 def physicality(pho):

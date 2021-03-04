@@ -8,7 +8,7 @@
 
 import numpy as np
 
-from QuantumComputer import Y_GATE, QuantumComputer, Z_GATE, CNOT_GATE
+from QC.QuantumComputer import Y_GATE, QuantumComputer, Z_GATE, CNOT_GATE
 
 
 def question1():
