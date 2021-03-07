@@ -1,7 +1,7 @@
 import numpy as np
 
 from QC.checks import is_unitary
-from QC.helper_func import kron
+from QC.helper_func import kron, nullspace
 
 IDENTITY_2 = np.identity(2)
 
@@ -70,13 +70,13 @@ def create_control_gate(gate, targets, one_controls, total_number_of_qubits):  #
     zero_term = []
     one_term = []
 
-    if one_controls is not list:
+    if not isinstance(one_controls, list):
         one_controls = [one_controls]
 
-    # if zero_controls is not list:
+    # if not isinstance(zero_controls, list):
     #     targets = [targets]
 
-    if targets is not list:
+    if not isinstance(targets, list):
         targets = [targets]
 
     for i in range(0, total_number_of_qubits):
@@ -99,3 +99,31 @@ def create_control_gate(gate, targets, one_controls, total_number_of_qubits):  #
         one_term.append(IDENTITY_2)
 
     return np.array(kron(*zero_term) + kron(*one_term))
+
+
+def create_unitary(initial, final):
+    if np.shape(initial) != np.shape(final):
+        raise Exception("shape of initial and final must be same.")
+
+    if np.isclose(initial, final).all():
+        return np.identity(initial.shape[0])
+
+    check = np.zeros(np.shape(initial))
+    check[0][0] = 1
+
+    check_initial = np.all(np.isclose(initial, check))
+    check_final = np.all(np.isclose(final, check))
+
+    def get_q(matrix):
+        measurement = np.matmul(matrix, check.transpose().conjugate())
+        null_spaced = measurement + np.pad(nullspace(measurement), ((0, 0), (1, 0)))
+        q, _ = np.linalg.qr(null_spaced)
+        return -q
+
+    if check_initial and not check_final:
+        return get_q(final)
+
+    if check_final and not check_initial:
+        return np.linalg.inv(get_q(initial))
+
+    return np.matmul(get_q(final), np.linalg.inv(get_q(initial)))

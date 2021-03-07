@@ -1,4 +1,5 @@
 # Source Code: https://github.com/Vivswan/PHYS-3770-Quantum-Information
+from multipledispatch import dispatch
 
 from numpy import random, ndarray
 
@@ -19,9 +20,17 @@ class QuantumComputer:
     density_matrix: ndarray
     unitary: ndarray
 
+    @dispatch(int)
     def __init__(self, number_of_qubits):
-        self.state, self.density_matrix = self.reset_state(number_of_qubits)
-        self.unitary = np.identity(np.power(2, number_of_qubits), dtype=complex)
+        self.reset_state(number_of_qubits)
+
+        self._save_unitary = self.unitary
+        self._save_state = self.state
+        self._save_density_matrix = self.density_matrix
+
+    @dispatch(ndarray)
+    def __init__(self, state):
+        self.set_state(state)
 
         self._save_unitary = self.unitary
         self._save_state = self.state
@@ -32,7 +41,7 @@ class QuantumComputer:
         self.state = np.zeros((dim, 1), dtype=complex)
         self.state[0] = 1
         self.density_matrix = np.matmul(self.state, self.state.conjugate().transpose())
-        return self.state, self.density_matrix
+        self.unitary = np.identity(np.power(2, self.num_qubit()), dtype=complex)
 
     def set_state(self, state):
         if not np.power(2, int(np.log2(np.shape(state)[0]))) == np.shape(state)[0]:
@@ -43,6 +52,7 @@ class QuantumComputer:
 
         self.state = np.copy(state)
         self.density_matrix = np.matmul(self.state, self.state.conjugate().transpose())
+        self.unitary = create_unitary(zero_state_matrix(self.num_qubit()), self.state)
 
     def set_density_matrix(self, density_matrix):
         if not np.power(2, int(np.log2(np.shape(density_matrix)[0]))):
