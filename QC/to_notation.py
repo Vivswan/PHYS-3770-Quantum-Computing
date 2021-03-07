@@ -2,7 +2,8 @@ import numpy as np
 
 
 def to_ket_notation(state, probabilities=False):
-    max_state = int(np.log2(len(state)))
+    state = np.atleast_2d(state)
+    max_state = int(np.log2(np.shape(state)[0]))
     notation = ""
 
     for index, state in enumerate(state):
@@ -30,6 +31,7 @@ def to_ket_notation(state, probabilities=False):
 
 
 def to_bra_ket_notation(density_matrix):
+    density_matrix = np.atleast_2d(density_matrix)
     num_qubits = int(np.log2(np.shape(density_matrix)[0]))
     bra_ket_notation = ""
 

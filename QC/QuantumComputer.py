@@ -44,6 +44,7 @@ class QuantumComputer:
         self.unitary = np.identity(np.power(2, self.num_qubit()), dtype=complex)
 
     def set_state(self, state):
+        state = np.atleast_2d(state)
         if not np.power(2, int(np.log2(np.shape(state)[0]))) == np.shape(state)[0]:
             raise Exception("invalid state.")
 
@@ -55,6 +56,7 @@ class QuantumComputer:
         self.unitary = create_unitary(zero_state_matrix(self.num_qubit()), self.state)
 
     def set_density_matrix(self, density_matrix):
+        density_matrix = np.atleast_2d(density_matrix)
         if not np.power(2, int(np.log2(np.shape(density_matrix)[0]))):
             raise Exception("invalid density_matrix.")
 

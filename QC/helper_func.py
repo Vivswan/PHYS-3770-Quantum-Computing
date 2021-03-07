@@ -19,9 +19,9 @@ def matmul(*args):
     return apply_to_list(args, np.matmul)
 
 
-def nullspace(A, atol=1e-13, rtol=0):
-    A = np.atleast_2d(A)
-    u, s, vh = np.linalg.svd(A)
+def nullspace(matrix, atol=1e-13, rtol=0):
+    matrix = np.atleast_2d(matrix)
+    u, s, vh = np.linalg.svd(matrix)
     tol = max(atol, rtol * s[0])
     nnz = (s >= tol).sum()
     ns = vh[nnz:].conj().T
