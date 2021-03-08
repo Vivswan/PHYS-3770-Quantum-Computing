@@ -1,13 +1,12 @@
 from QC.QuantumComputer import *
 
 qc = QuantumComputer(2)
-state = qc.state
 qc.H(0)
-qc.CNOT(0, 1)
-qc.H(1)
-qc.X(0)
+# qc.CNOT(0, 1)
+# qc.H(1)
+# qc.X(0)
 qc.CNOT(1, 2)
-qc.X(1)
+# qc.X(1)
 qc.Y(1)
 qc.Y(2)
 
@@ -26,13 +25,32 @@ qc.Y(2)
 #     r[t] += 1
 #
 # print(r)
-uni = qc.unitary
-initial = state
-final = qc.state
-qc.set_state(qc.state)
-unitary = qc.unitary
-print(np.round(uni, 2))
-print(np.round(unitary, 2))
-print(is_unitary(uni), np.isclose(np.matmul(uni, initial), final).all())
-print(is_unitary(unitary), np.isclose(np.matmul(unitary, initial), final).all())
-print(np.isclose(np.matmul(uni, initial), final).all(), np.isclose(uni, unitary).all())
+initial_state = zero_state_matrix(qc.num_qubit())
+initial_density_matrix = zero_state_matrix(qc.num_qubit(), 2)
+
+unitary_density_matrix = create_unitary(initial_density_matrix, qc.density_matrix)
+unitary_state = create_unitary(initial_state, qc.state)
+
+print(np.round(qc.state, 2).tolist())
+print("density_matrix:\n", np.round(qc.density_matrix, 2))
+print()
+xx = np.linalg.norm(qc.density_matrix, axis=1).reshape((qc.density_matrix.shape[0], 1))
+xx[np.isclose(xx, 0)] = 1
+print(np.round(xx, 2))
+print(np.round(qc.density_matrix / xx, 2))
+# print("unitary:\n", np.round(qc.unitary, 2))
+# print("unitary_state:\n", np.round(unitary_state, 2))
+# print("unitary_density_matrix:\n", np.round(unitary_density_matrix, 2))
+# print("dm == s: ", np.isclose(unitary_density_matrix, unitary_state).all())
+# print("unitary: ", is_unitary(unitary_state), is_unitary(unitary_density_matrix))
+# print("final_s: ",
+#       np.isclose(matmul(unitary_state, initial_state), qc.state).all(),
+#       np.isclose(matmul(qc.unitary, initial_state), qc.state).all(),
+#       np.isclose(matmul(initial_state.conj().T, qc.unitary.conj().T).conj().T, qc.state).all(),
+# )
+# print("final_dm: ",
+#       np.isclose(matmul(unitary_density_matrix, initial_density_matrix, unitary_density_matrix.conj().T), qc.density_matrix).all(),
+#       np.isclose(matmul(unitary_state, initial_density_matrix, unitary_state.conj().T), qc.density_matrix).all(),
+#       np.isclose(matmul(qc.unitary.conj().T, initial_density_matrix, qc.unitary), qc.density_matrix).all()
+# )
+# print(np.round(matmul(unitary_state.conj().T, initial_density_matrix, unitary_state), 2))

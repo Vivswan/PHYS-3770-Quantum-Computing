@@ -30,7 +30,7 @@ def to_ket_notation(state, probabilities=False):
     return notation
 
 
-def to_bra_ket_notation(density_matrix):
+def to_ket_bra_notation(density_matrix):
     density_matrix = np.atleast_2d(density_matrix)
     num_qubits = int(np.log2(np.shape(density_matrix)[0]))
     bra_ket_notation = ""

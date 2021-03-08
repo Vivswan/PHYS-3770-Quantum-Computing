@@ -55,16 +55,16 @@ class QuantumComputer:
         self.density_matrix = np.matmul(self.state, self.state.conjugate().transpose())
         self.unitary = create_unitary(zero_state_matrix(self.num_qubit()), self.state)
 
-    def set_density_matrix(self, density_matrix):
-        density_matrix = np.atleast_2d(density_matrix)
-        if not np.power(2, int(np.log2(np.shape(density_matrix)[0]))):
-            raise Exception("invalid density_matrix.")
-
-        if not np.shape(density_matrix)[0] == np.shape(density_matrix)[1]:
-            raise Exception("density_matrix is not square.")
-
-        self.density_matrix = np.copy(density_matrix)
-        self.state = density_matrix_to_state(self.density_matrix)
+    # def set_density_matrix(self, density_matrix):
+    #     density_matrix = np.atleast_2d(density_matrix)
+    #     if not np.power(2, int(np.log2(np.shape(density_matrix)[0]))):
+    #         raise Exception("invalid density_matrix.")
+    #
+    #     if not np.shape(density_matrix)[0] == np.shape(density_matrix)[1]:
+    #         raise Exception("density_matrix is not square.")
+    #
+    #     self.density_matrix = np.copy(density_matrix)
+    #     self.state = density_matrix_to_state(self.density_matrix)
 
     def get_density_matrix_of(self, qubit):
         return density_matrix_of(self.density_matrix, qubit)
@@ -85,11 +85,11 @@ class QuantumComputer:
             raise Exception("Full Gate not unitary.")
 
         self.unitary = np.matmul(gate, self.unitary)
-        self.density_matrix = matmul(gate.conj().T, self.density_matrix, gate)
         self.state = np.matmul(gate, self.state)
+        self.density_matrix = matmul(gate, self.density_matrix, gate.conj().T)
 
     def controlled_gate(self, gate, targets, controls):
-        return self.full_gate(create_control_gate(X_GATE, targets, controls, self.num_qubit()))
+        return self.full_gate(create_control_gate(gate, targets, controls, self.num_qubit()))
 
     def X(self, target):
         return self.gates(X_GATE, target)
@@ -122,7 +122,7 @@ class QuantumComputer:
         return to_ket_notation(self.state, probabilities=probabilities)
 
     def bra_ket_notation(self):
-        return to_bra_ket_notation(self.density_matrix)
+        return to_ket_bra_notation(self.density_matrix)
 
     def get_probabilities(self):
         return np.power(np.abs(self.state), 2)
@@ -134,20 +134,18 @@ class QuantumComputer:
         gate = Measurement_ZERO if outcome == 0 else Measurement_ONE
         measurement = full_unitary_at_time_step(self.num_qubit(), {qubit: gate})
 
-        new_density_matrix = matmul(measurement, self.density_matrix, measurement)
-        probability = np.trace(np.abs(new_density_matrix))
-        probability_check = np.abs(np.trace(matmul(self.state.conjugate().transpose(), measurement, self.state)))
-
-        if not np.isclose(probability, probability_check):
-            raise Exception(f"State and Density Matrix are not connected. QC is faulty.")
+        new_state = matmul(measurement, self.state)
+        probability = matmul(self.state.conj().T, measurement.conj().T, measurement, self.state)
 
         if get_states:
             if probability != 0:
-                new_density_matrix = new_density_matrix / probability
-                new_state = density_matrix_to_state(new_density_matrix)
+                new_state /= np.sqrt(probability)
+                new_density_matrix = matmul(new_state, new_state.conj().T,)
+                if not np.isclose(np.linalg.norm(new_state), 1):
+                    raise Exception("new state not normalised")
             else:
-                new_density_matrix = None
                 new_state = None
+                new_density_matrix = None
 
             return probability, new_state, new_density_matrix
         else:
@@ -186,7 +184,11 @@ class QuantumComputer:
         if outcome not in [0, 1]:
             raise Exception(f"invalid outcome: {outcome}")
 
-        _, state, density_matrix = self.get_probability_of(qubit, outcome, get_states=True)
+        p, state, density_matrix = self.get_probability_of(qubit, outcome, get_states=True)
+
+        if np.isclose(p, 0):
+            raise Exception("this outcome is not possible")
+
         self.state = state
         self.density_matrix = density_matrix
 

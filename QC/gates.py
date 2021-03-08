@@ -101,12 +101,28 @@ def create_control_gate(gate, targets, one_controls, total_number_of_qubits):  #
     return np.array(kron(*zero_term) + kron(*one_term))
 
 
-def create_unitary(initial, final):
+def create_unitary_by_density_matrices(initial, final):
     if np.shape(initial) != np.shape(final):
         raise Exception("shape of initial and final must be same.")
 
     if np.isclose(initial, final).all():
         return np.identity(initial.shape[0])
+
+    initial = np.sqrt(np.atleast_2d(initial).diagonal()).reshape((initial.shape[0], 1))
+    final = np.sqrt(np.atleast_2d(final).diagonal()).reshape((final.shape[0], 1))
+
+    return create_unitary_by_state(initial, final)
+
+
+def create_unitary_by_state(initial, final):
+    if np.shape(initial) != np.shape(final):
+        raise Exception("shape of initial and final must be same.")
+
+    if np.isclose(initial, final).all():
+        return np.identity(initial.shape[0])
+
+    initial = np.atleast_2d(initial)
+    final = np.atleast_2d(final)
 
     check = np.zeros(np.shape(initial))
     check[0][0] = 1
@@ -127,3 +143,20 @@ def create_unitary(initial, final):
         return np.linalg.inv(get_q(initial))
 
     return np.matmul(get_q(final), np.linalg.inv(get_q(initial)))
+
+
+def create_unitary(initial, final):
+    if np.shape(initial) != np.shape(final):
+        raise Exception("shape of initial and final must be same.")
+
+    if np.isclose(initial, final).all():
+        return np.identity(initial.shape[0])
+
+    initial = np.atleast_2d(initial)
+    final = np.atleast_2d(final)
+
+    if initial.shape[1] == 1:
+        return create_unitary_by_state(initial, final)
+
+    if initial.shape[0] == initial.shape[1]:
+        return create_unitary_by_density_matrices(initial, final)
