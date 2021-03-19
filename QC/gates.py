@@ -1,7 +1,7 @@
 import numpy as np
 
 from QC.checks import is_unitary
-from QC.helper_func import kron, nullspace
+from QC.helper_func import kron, nullspace, density_matrix_to_state
 
 IDENTITY_2 = np.identity(2)
 
@@ -108,8 +108,8 @@ def create_unitary_by_density_matrices(initial, final):
     if np.isclose(initial, final).all():
         return np.identity(initial.shape[0])
 
-    initial = np.sqrt(np.atleast_2d(initial).diagonal()).reshape((initial.shape[0], 1))
-    final = np.sqrt(np.atleast_2d(final).diagonal()).reshape((final.shape[0], 1))
+    initial = density_matrix_to_state(initial)
+    final = density_matrix_to_state(final)
 
     return create_unitary_by_state(initial, final)
 

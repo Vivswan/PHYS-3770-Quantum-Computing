@@ -10,10 +10,6 @@ from QC.throw_or_trace import density_matrix_of
 from QC.to_notation import *
 
 
-def density_matrix_to_state(density_matrix: ndarray):
-    return np.sqrt(density_matrix.diagonal().reshape((density_matrix.shape[0], 1)))
-
-
 # noinspection PyPep8Naming
 class QuantumComputer:
     state: ndarray
@@ -42,6 +38,7 @@ class QuantumComputer:
         self.state[0] = 1
         self.density_matrix = np.matmul(self.state, self.state.conjugate().transpose())
         self.unitary = np.identity(np.power(2, self.num_qubit()), dtype=complex)
+        return self
 
     def set_state(self, state):
         state = np.atleast_2d(state)
@@ -54,6 +51,7 @@ class QuantumComputer:
         self.state = np.copy(state)
         self.density_matrix = np.matmul(self.state, self.state.conjugate().transpose())
         self.unitary = create_unitary(zero_state_matrix(self.num_qubit()), self.state)
+        return self
 
     # def set_density_matrix(self, density_matrix):
     #     density_matrix = np.atleast_2d(density_matrix)
@@ -77,6 +75,7 @@ class QuantumComputer:
             gates = {qubit: gates}
 
         self.full_gate(full_unitary_at_time_step(self.num_qubit(), gates))
+        return self
 
     def full_gate(self, gate):
         if not gate.shape == self.unitary.shape:
@@ -87,9 +86,13 @@ class QuantumComputer:
         self.unitary = np.matmul(gate, self.unitary)
         self.state = np.matmul(gate, self.state)
         self.density_matrix = matmul(gate, self.density_matrix, gate.conj().T)
+        return self
 
     def controlled_gate(self, gate, targets, controls):
         return self.full_gate(create_control_gate(gate, targets, controls, self.num_qubit()))
+
+    def I(self, target):
+        return self.gates(IDENTITY_2, target)
 
     def X(self, target):
         return self.gates(X_GATE, target)
@@ -191,6 +194,7 @@ class QuantumComputer:
 
         self.state = state
         self.density_matrix = density_matrix
+        return self
 
     def measurement_all(self):
         observations = []
@@ -204,8 +208,10 @@ class QuantumComputer:
         self._save_unitary = self.unitary
         self._save_state = self.state
         self._save_density_matrix = self.density_matrix
+        return self
 
     def load(self):
         self.unitary = self._save_unitary
         self.state = self._save_state
         self.density_matrix = self._save_density_matrix
+        return self

@@ -25,21 +25,11 @@ qc.Y(2)
 #     r[t] += 1
 #
 # print(r)
-initial_state = zero_state_matrix(qc.num_qubit())
-initial_density_matrix = zero_state_matrix(qc.num_qubit(), 2)
-
-unitary_density_matrix = create_unitary(initial_density_matrix, qc.density_matrix)
-unitary_state = create_unitary(initial_state, qc.state)
-
-print(np.round(qc.state, 2).tolist())
-print("density_matrix:\n", np.round(qc.density_matrix, 2))
-print()
-xx = np.linalg.norm(qc.density_matrix, axis=1).reshape((qc.density_matrix.shape[0], 1))
-xx[np.isclose(xx, 0)] = 1
-print(np.round(xx, 2))
-print(np.round(qc.density_matrix / xx, 2))
+# initial_state = zero_state_matrix(qc.num_qubit())
+# initial_density_matrix = zero_state_matrix(qc.num_qubit(), 2)
+#
+# unitary_density_matrix = create_unitary(initial_density_matrix, qc.density_matrix)
 # print("unitary:\n", np.round(qc.unitary, 2))
-# print("unitary_state:\n", np.round(unitary_state, 2))
 # print("unitary_density_matrix:\n", np.round(unitary_density_matrix, 2))
 # print("dm == s: ", np.isclose(unitary_density_matrix, unitary_state).all())
 # print("unitary: ", is_unitary(unitary_state), is_unitary(unitary_density_matrix))
@@ -54,3 +44,7 @@ print(np.round(qc.density_matrix / xx, 2))
 #       np.isclose(matmul(qc.unitary.conj().T, initial_density_matrix, qc.unitary), qc.density_matrix).all()
 # )
 # print(np.round(matmul(unitary_state.conj().T, initial_density_matrix, unitary_state), 2))
+dm = density_matrix_to_state(qc.density_matrix)
+print(np.round(qc.state, 2).tolist())
+print(np.round(dm, 2))
+print(np.isclose(dm, qc.state).all())

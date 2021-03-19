@@ -38,3 +38,13 @@ def zero_state_matrix(number_of_qubits, dim=1):
     state = np.zeros(shape)
     state[0][0] = 1
     return state
+
+
+def state_to_density_matrix(state: np.ndarray):
+    return np.matmul(state, state.conjugate().transpose())
+
+
+def density_matrix_to_state(density_matrix: np.ndarray):
+    print(np.round(density_matrix, 2))
+
+    return np.sqrt(density_matrix.diagonal().reshape((density_matrix.shape[0], 1)))
