@@ -1,6 +1,23 @@
 import numpy as np
 
 
+def complex_to_str(value, floating_point=3, with_zero=False):
+    notation = ""
+
+    is_state_real = not np.isclose(complex(value).real, 0)
+    is_state_imag = not np.isclose(complex(value).imag, 0)
+    if is_state_real:
+        notation += f"{complex(value).real:.{floating_point}f}"
+    if is_state_real and is_state_imag:
+        notation += " + "
+    if is_state_imag:
+        notation += f"{complex(value).imag:.{floating_point}f}i"
+    if with_zero and not is_state_real and not is_state_imag:
+        notation += f"{0:.{floating_point}f}"
+
+    return notation
+
+
 def to_ket_notation(state, probabilities=False):
     state = np.atleast_2d(state)
     max_state = int(np.log2(np.shape(state)[0]))
@@ -12,20 +29,11 @@ def to_ket_notation(state, probabilities=False):
             if len(notation) > 0:
                 notation += " + "
 
-            if probabilities:
-                notation += f"{np.power(np.abs(state), 2):.3f}"
-            else:
-                is_state_real = not np.isclose(complex(state).real, 0)
-                is_state_imag = not np.isclose(complex(state).imag, 0)
-                if is_state_real:
-                    notation += f"{complex(state).real:.3f}"
-                if is_state_real and is_state_imag:
-                    notation += " + "
-                if is_state_imag:
-                    notation += f"{complex(state).imag:.3f}i"
-
             n_state = "{0:b}".format(index).zfill(max_state)
-            notation += f" |{n_state}⟩"
+            if probabilities:
+                notation += f"{np.power(np.abs(state), 2):.3f} |{n_state}⟩"
+            else:
+                notation += f"{complex_to_str(state)} |{n_state}⟩"
 
     return notation
 
@@ -44,11 +52,7 @@ def to_ket_bra_notation(density_matrix):
             if not np.isclose(density_matrix[row_index][col_index], 0):
                 if len(bra_ket_notation) > 0:
                     bra_ket_notation += " + "
-                if np.isclose(np.imag(density_matrix[row_index][col_index]), 0):
-                    value = np.real(density_matrix[row_index][col_index])
-                else:
-                    value = np.imag(density_matrix[row_index][col_index])
 
-                bra_ket_notation += f"{str(np.round(value, 3)).replace('j', 'i')} |{row}⟩⟨{col}|"
+                bra_ket_notation += f"{complex_to_str(density_matrix[row_index][col_index])} |{row}⟩⟨{col}|"
 
     return bra_ket_notation

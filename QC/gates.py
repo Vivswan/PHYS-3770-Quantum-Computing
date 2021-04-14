@@ -3,7 +3,7 @@ import numpy as np
 from QC.checks import is_unitary
 from QC.helper_func import kron, nullspace, density_matrix_to_state
 
-IDENTITY_2 = np.identity(2)
+IDENTITY_2 = np.identity(2, dtype=complex)
 
 ZERO = np.array([
     [1],
